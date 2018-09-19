@@ -2,6 +2,8 @@
 
 最近又看到有人是分享使用空Fragment，来避免重写onActivityResult进行Activity之间信息的交互，这让我想起了之前看到的RxPermissions这个库也是使用这个原理去申请权限，当时觉得居然还有这种操作，想象力真是太好了。
 
+但是即使它这个再好，我还是想说我这个可能更好一点。
+
 ### 优点
 
 * 没有使用多余的第三方库
@@ -30,7 +32,8 @@ allprojects {
 ```
 dependencies {
     ...
-    compile 'com.github.arvinljw:PermissionHelper:v1.0.0'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.github.arvinljw:PermissionHelper:v1.0.0'
 }
 ```
 

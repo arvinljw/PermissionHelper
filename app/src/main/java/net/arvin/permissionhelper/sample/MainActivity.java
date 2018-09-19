@@ -3,11 +3,9 @@ package net.arvin.permissionhelper.sample;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.support.v4.app.ActivityCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.widget.TextView;
@@ -43,8 +41,8 @@ public class MainActivity extends AppCompatActivity {
                     .setCancelBtnColor(Color.BLACK)//弹框取消文本颜色
                     .build();
         }
-        permissionUtil.request("需要读取联系人权限",
-                PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS),
+        permissionUtil.request("需要读取手机信息权限",
+                PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE),
                 new PermissionUtil.RequestPermissionListener() {
                     @Override
                     public void callback(boolean granted, boolean isAlwaysDenied) {
@@ -54,8 +52,10 @@ public class MainActivity extends AppCompatActivity {
                                 @SuppressLint({"MissingPermission", "HardwareIds"})
                                 String deviceId = phone.getDeviceId();
                                 tvDeviceInfo.setText(deviceId);
+                                Toast.makeText(MainActivity.this, "权限申请成功", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(MainActivity.this, "deviceId is null", Toast.LENGTH_LONG).show();
                             }
-                            Toast.makeText(MainActivity.this, "权限申请成功", Toast.LENGTH_SHORT).show();
                         } else {
                             if (isAlwaysDenied) {
                                 Toast.makeText(MainActivity.this, "权限申请失败，用户已拒绝且不提示，请自行到设置中修改", Toast.LENGTH_LONG).show();
