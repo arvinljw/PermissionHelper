@@ -1,5 +1,6 @@
 package net.arvin.permissionhelper;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -31,6 +32,7 @@ import java.util.List;
 public class PermissionFragment extends Fragment {
     private static final int REQUEST_CODE_PERMISSION = 0x1001;
     private static final int REQUEST_CODE_SETTING = 0x1002;
+    private static final int REQUEST_CODE_INSTALL_APP = 0x1003;
 
     private Context context;
     private PermissionUtil permissionUtil;
@@ -40,6 +42,7 @@ public class PermissionFragment extends Fragment {
 
     private AlertDialog requestPermissionDialog;
     private AlertDialog openSettingDialog;
+    private AlertDialog openInstallAppDialog;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -99,6 +102,10 @@ public class PermissionFragment extends Fragment {
 
     private void showRequestPermissionDialog(String msg, final String[] permissions, Activity activity) {
         PermissionUtil.Builder resBuilder = permissionUtil.getBuilder();
+        if (!resBuilder.isShowRequest()) {
+            requestPermissions(permissions, REQUEST_CODE_PERMISSION);
+            return;
+        }
         if (requestPermissionDialog == null) {
             requestPermissionDialog = new CustomAlertDialogBuilder(activity)
                     .initRequestPermission(resBuilder, msg, new DialogInterface.OnClickListener() {
@@ -112,6 +119,14 @@ public class PermissionFragment extends Fragment {
                             requestBack(false);
                         }
                     }).create();
+            requestPermissionDialog.setCancelable(resBuilder.isRequestCancelable());
+            requestPermissionDialog.setCanceledOnTouchOutside(resBuilder.isRequestCancelable());
+            requestPermissionDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    requestBack(false);
+                }
+            });
         }
         requestPermissionDialog.setMessage(msg);
         requestPermissionDialog.show();
@@ -176,6 +191,14 @@ public class PermissionFragment extends Fragment {
                                 requestBack(false);
                             }
                         }).create();
+                openSettingDialog.setCancelable(resBuilder.isSettingCancelable());
+                openSettingDialog.setCanceledOnTouchOutside(resBuilder.isSettingCancelable());
+                openSettingDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    @Override
+                    public void onCancel(DialogInterface dialog) {
+                        requestBack(false);
+                    }
+                });
             }
             openSettingDialog.show();
             setAlertDialogColor(openSettingDialog, resBuilder);
@@ -195,6 +218,71 @@ public class PermissionFragment extends Fragment {
         if (requestCode == REQUEST_CODE_SETTING) {
             request(requestMsg, requestPermissions);
         }
+        if (requestCode == REQUEST_CODE_INSTALL_APP) {
+            requestInstallApp(true);
+        }
+    }
+
+    public void requestInstallApp() {
+        requestInstallApp(false);
+    }
+
+    private void requestInstallApp(boolean fromResult) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            boolean haveInstallPermission = context.getPackageManager().canRequestPackageInstalls();
+            if (!haveInstallPermission) {
+                showOpenInstallAppPermissionDialog(fromResult);
+                return;
+            }
+        }
+        callCanInstallApp(true);
+    }
+
+    private void showOpenInstallAppPermissionDialog(boolean fromResult) {
+        final Activity activity = getActivity();
+        if (null == activity || permissionUtil == null) {
+            return;
+        }
+        PermissionUtil.Builder resBuilder = permissionUtil.getBuilder();
+        if (!resBuilder.isShowInstall()) {
+            if (fromResult) {
+                callCanInstallApp(false);
+            } else {
+                openInstallAppSetting();
+            }
+            return;
+        }
+        if (openInstallAppDialog == null) {
+            openInstallAppDialog = new CustomAlertDialogBuilder(activity)
+                    .initInstallApp(resBuilder, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            openInstallAppSetting();
+                        }
+                    }, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            callCanInstallApp(false);
+                        }
+                    }).create();
+            openInstallAppDialog.setCancelable(resBuilder.isSettingCancelable());
+            openInstallAppDialog.setCanceledOnTouchOutside(resBuilder.isSettingCancelable());
+            openInstallAppDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    callCanInstallApp(false);
+                }
+            });
+        }
+        openInstallAppDialog.show();
+        setAlertDialogColor(openInstallAppDialog, resBuilder);
+    }
+
+    @TargetApi(Build.VERSION_CODES.O)
+    private void openInstallAppSetting() {
+        Uri packageURI = Uri.parse("package:" + context.getPackageName());
+        Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, packageURI);
+        startActivityForResult(intent, REQUEST_CODE_INSTALL_APP);
     }
 
     private void requestBack(boolean granted) {
@@ -204,6 +292,12 @@ public class PermissionFragment extends Fragment {
     private void requestBack(boolean granted, boolean isAlwaysDenied) {
         if (permissionUtil != null) {
             permissionUtil.requestBack(granted, isAlwaysDenied);
+        }
+    }
+
+    private void callCanInstallApp(boolean canInstall) {
+        if (permissionUtil != null) {
+            permissionUtil.callCanInstallApp(canInstall);
         }
     }
 
@@ -287,6 +381,21 @@ public class PermissionFragment extends Fragment {
             }
             if (!TextUtils.isEmpty(resBuilder.getSettingCancelText())) {
                 setNegativeButton(resBuilder.getSettingCancelText(), cancelListener);
+            }
+            return this;
+        }
+
+        CustomAlertDialogBuilder initInstallApp(PermissionUtil.Builder resBuilder, DialogInterface.OnClickListener ensureListener,
+                                                DialogInterface.OnClickListener cancelListener) {
+            setMessage(resBuilder.getInstallAppMsg());
+            if (!TextUtils.isEmpty(resBuilder.getTitleText())) {
+                setTitle(resBuilder.getTitleText());
+            }
+            if (!TextUtils.isEmpty(resBuilder.getEnsureBtnText())) {
+                setPositiveButton(resBuilder.getEnsureBtnText(), ensureListener);
+            }
+            if (!TextUtils.isEmpty(resBuilder.getCancelBtnText())) {
+                setNegativeButton(resBuilder.getCancelBtnText(), cancelListener);
             }
             return this;
         }

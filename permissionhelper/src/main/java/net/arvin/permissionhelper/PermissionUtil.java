@@ -1,10 +1,18 @@
 package net.arvin.permissionhelper;
 
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.support.annotation.ColorInt;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
+
+import java.io.File;
 
 /**
  * Created by arvinljw on 2018/9/17 16:30
@@ -17,6 +25,7 @@ public class PermissionUtil {
     private Builder builder;
     private PermissionFragment permissionFragment;
     private RequestPermissionListener requestPermissionListener;
+    private RequestInstallAppListener requestInstallAppListener;
 
     PermissionUtil(Builder builder) {
         this.builder = builder;
@@ -74,8 +83,49 @@ public class PermissionUtil {
         }
     }
 
+    public void requestInstallApp(RequestInstallAppListener listener) {
+        if (permissionFragment == null) {
+            Log.e(TAG, "PermissionUtil must set activity or fragment");
+            return;
+        }
+        this.requestInstallAppListener = listener;
+        permissionFragment.requestInstallApp();
+    }
+
+    void callCanInstallApp(boolean canInstall) {
+        if (requestInstallAppListener != null) {
+            requestInstallAppListener.canInstallApp(canInstall);
+        }
+    }
+
     public void removeListener() {
         requestPermissionListener = null;
+        requestInstallAppListener = null;
+    }
+
+    public static Uri getUri(@NonNull Context context, @NonNull File file) {
+        return getUri(context, file, context.getPackageName() + ".fileprovider");
+    }
+
+    public static Uri getUri(@NonNull Context context, @NonNull File file, @NonNull String authority) {
+        return getUri(context, null, file, authority);
+    }
+
+    public static Uri getUri(@NonNull Context context, @NonNull Intent intent, @NonNull File file) {
+        return getUri(context, intent, file, context.getPackageName() + ".fileprovider");
+    }
+
+    public static Uri getUri(@NonNull Context context, Intent intent, @NonNull File file, @NonNull String authority) {
+        Uri uri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+            uri = FileProvider.getUriForFile(context, authority, file);
+        } else {
+            uri = Uri.fromFile(file);
+        }
+        return uri;
     }
 
     public static class Builder {
@@ -88,8 +138,18 @@ public class PermissionUtil {
         private String ensureBtnText;
         /*默认是：取消*/
         private String cancelBtnText;
-        /*是否现实设置弹框，默认显示*/
+        /*申请权限说明弹款是否cancelable*/
+        private boolean isRequestCancelable = true;
+        /*打开设置界面弹款是否cancelable*/
+        private boolean isSettingCancelable = true;
+        /*打开允许安装此来源引用弹款是否cancelable*/
+        private boolean isInstallCancelable = true;
+        /*是否显示申请权限弹框，默认显示*/
+        private boolean isShowRequest = true;
+        /*是否显示设置弹框，默认显示*/
         private boolean isShowSetting = true;
+        /*是否显示允许安装此来源弹框，默认显示*/
+        private boolean isShowInstall = true;
         /*如果用户手动选择了不在提示申请权限的弹框，则让用户去打开设置界面，就是指这个文字提示，
          * 默认是：当前应用缺少必要权限。\n请点击"设置"-"权限"-打开所需权限。*/
         private String settingMsg;
@@ -97,6 +157,8 @@ public class PermissionUtil {
         private String settingEnsureText;
         /*默认是：取消*/
         private String settingCancelText;
+        /*默认是：允许安装来自此来源的应用*/
+        private String installAppMsg;
 
         /*颜色没有设置就是默认使用系统AlertDialog的对应颜色*/
         @ColorInt
@@ -136,8 +198,33 @@ public class PermissionUtil {
             return this;
         }
 
+        public Builder setShowRequest(boolean showRequest) {
+            isShowRequest = showRequest;
+            return this;
+        }
+
+        public Builder setRequestCancelable(boolean requestCancelable) {
+            isRequestCancelable = requestCancelable;
+            return this;
+        }
+
+        public Builder setSettingCancelable(boolean settingCancelable) {
+            isSettingCancelable = settingCancelable;
+            return this;
+        }
+
+        public Builder setInstallCancelable(boolean installCancelable) {
+            isInstallCancelable = installCancelable;
+            return this;
+        }
+
         public Builder setShowSetting(boolean showSetting) {
             isShowSetting = showSetting;
+            return this;
+        }
+
+        public Builder setShowInstall(boolean showInstall) {
+            isShowInstall = showInstall;
             return this;
         }
 
@@ -153,6 +240,11 @@ public class PermissionUtil {
 
         public Builder setSettingCancelText(String settingCancelText) {
             this.settingCancelText = settingCancelText;
+            return this;
+        }
+
+        public Builder setInstallAppMsg(String installAppMsg) {
+            this.installAppMsg = installAppMsg;
             return this;
         }
 
@@ -188,8 +280,28 @@ public class PermissionUtil {
             return cancelBtnText;
         }
 
+        public boolean isRequestCancelable() {
+            return isRequestCancelable;
+        }
+
+        public boolean isSettingCancelable() {
+            return isSettingCancelable;
+        }
+
+        public boolean isInstallCancelable() {
+            return isInstallCancelable;
+        }
+
+        public boolean isShowRequest() {
+            return isShowRequest;
+        }
+
         public boolean isShowSetting() {
             return isShowSetting;
+        }
+
+        public boolean isShowInstall() {
+            return isShowInstall;
         }
 
         public String getSettingMsg() {
@@ -202,6 +314,10 @@ public class PermissionUtil {
 
         public String getSettingCancelText() {
             return settingCancelText;
+        }
+
+        public String getInstallAppMsg() {
+            return installAppMsg;
         }
 
         public int getTitleColor() {
@@ -236,6 +352,9 @@ public class PermissionUtil {
             if (textIsNone(settingCancelText)) {
                 settingCancelText = "取消";
             }
+            if (textIsNone(installAppMsg)) {
+                installAppMsg = "允许安装来自此来源的应用";
+            }
             return new PermissionUtil(this);
         }
 
@@ -250,5 +369,9 @@ public class PermissionUtil {
          * @param isAlwaysDenied false表示会重复提示，true表示拒绝且不再提示
          */
         void callback(boolean granted, boolean isAlwaysDenied);
+    }
+
+    public interface RequestInstallAppListener {
+        void canInstallApp(boolean canInstall);
     }
 }

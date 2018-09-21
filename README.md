@@ -4,13 +4,15 @@
 
 但是即使它这个再好，我还是想说我这个可能更好一点。
 
+[项目地址](https://github.com/arvinljw/PermissionHelper)
+
 ### 优点
 
 * 没有使用多余的第三方库
 * Google权限申请的最佳实践
 * 使用简单，低耦合，可自定义提示框样式
-* 集成6.0、7.0、8.0权限（**后两个待完善**）
-* 申请Manifest中没有的权限时，增加提示（**待完成**）
+* 集成6.0动态申请权限，适配7.0文件共享以及8.0安装来自未知来源的应用
+* 申请Manifest中没有的权限时提示
 
 ### 用法
 
@@ -33,7 +35,7 @@ allprojects {
 dependencies {
     ...
     implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.github.arvinljw:PermissionHelper:v1.0.0'
+    implementation 'com.github.arvinljw:PermissionHelper:v1.0.1'
 }
 ```
 
@@ -43,14 +45,20 @@ dependencies {
 
 ```
 permissionUtil = new PermissionUtil.Builder()
-        .with(this)//必传：可使用FragmentActivity或v4.app.Fragment实例
+        .with(this)//必传：可使用FragmentActivity或v4.Fragment实例
         .setTitleText("提示")//弹框标题
         .setEnsureBtnText("确定")//权限说明弹框授权按钮文字
         .setCancelBtnText("取消")//权限说明弹框取消授权按钮文字
         .setSettingEnsureText("设置")//打开设置说明弹框打开按钮文字
         .setSettingCancelText("取消")//打开设置说明弹框关闭按钮文字
         .setSettingMsg("当前应用缺少必要权限。\n请点击\"设置\"-\"权限\"-打开所需权限。")//打开设置说明弹框内容文字
-        .setShowSetting(true)//是否打开设置说明弹框
+        .setInstallAppMsg("允许安装来自此来源的应用")//打开允许安装此来源的应用设置
+        .setShowRequest(true)//是否显示申请权限弹框
+        .setShowSetting(true)//是否显示设置弹框
+        .setShowInstall(true)//是否显示允许安装此来源弹框
+        .setRequestCancelable(true)//申请权限说明弹款是否cancelable
+        .setSettingCancelable(true)//打开设置界面弹款是否cancelable
+        .setInstallCancelable(true)//打开允许安装此来源引用弹款是否cancelable
         .setTitleColor(Color.BLACK)//弹框标题文本颜色
         .setMsgColor(Color.GRAY)//弹框内容文本颜色
         .setEnsureBtnColor(Color.BLACK)//弹框确定文本颜色
@@ -58,7 +66,15 @@ permissionUtil = new PermissionUtil.Builder()
         .build();
 ```
 
-需要说明一下这里可能有两个弹框：
+可配置的属性很多，大致含义也注释写清楚了，必须调用的属性只有一个，其他都有默认值。
+
+**简洁版可以这样**：
+
+```
+permissionUtil = new PermissionUtil.Builder().with(this).build();
+```
+
+需要说明一下动态申请权限可能有两个弹框：
 
 * 第一个弹框：第一次申请权限被拒绝后，弹出的弹框，解释为什么需要这个权限。
 * 第二个弹框：打开设置说明的弹框，只有当isShowSetting为true的时候，被拒绝一次之后，再次申请时再次拒绝且还点了不再提示，则通过打开设置去让用户手动修改权限。
@@ -108,6 +124,12 @@ if (permissionUtil != null) {
 }
 ```
 
+### 7.0和8.0的适配
+
+[7.0文件权限适配](https://github.com/arvinljw/PermissionHelper/blob/master/doc/文件权限.md)
+
+[8.0安装未知来源应用适配](https://github.com/arvinljw/PermissionHelper/blob/master/doc/安装App权限.md)
+
 ### 混淆
 
 ```
@@ -118,6 +140,8 @@ if (permissionUtil != null) {
 
 这里想说，**有的手机只要用户永久拒绝了权限，那么打开设置去手动打开权限也是无效的**，索然会回调已获取权限，但是实际的使用中是获取不到那些信息的，例如联系人或者手机设备信息，我测试到的例如小米。当然如果能获取到的自然就不用管了。
 
+**这个问题目前测试的其他库也存在，所以这个问题尚未找到最好的解决方案**
+
 我参考了支付宝发现，在申请权限之前就先弹一个框告诉用户我需要这个权限，你要给我，如果你不给，就不去申请权限。但是如果点了给权限，但是在真正的权限弹框时又不给，依然无法解决，这个是系统的原因，改不了。
 
 目前有两个办法能让处于拒绝且不再提示的应用重新获取权限：
@@ -126,6 +150,10 @@ if (permissionUtil != null) {
 * 第二种方式就是手动清除应用所有数据，之前所有权限以及缓存都会消失，这种显然不是很友好，要是能找到权限的缓存数据存在哪个地方去手动清除也是一种办法，知道的朋友请不吝赐教。
 
 这是我发现的这个问题，要是有更好的解决方案，从而不会有这个问题的也请不吝赐教，那就非常感谢了。
+
+如果觉得好，可以star支持一下。
+
+[项目地址](https://github.com/arvinljw/PermissionHelper)
 
 ### 参考
 

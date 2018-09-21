@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--this path is same as Context.getExternalFilesDir(String)-->
+<paths>
+    <external-files-path
+        name="default_external_files_path"
+        path="/"/>
+</paths>
