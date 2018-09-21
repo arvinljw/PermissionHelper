@@ -57,8 +57,6 @@ public class MainActivity extends AppCompatActivity {
                 .setEnsureBtnColor(Color.BLACK)//弹框确定文本颜色
                 .setCancelBtnColor(Color.BLACK)//弹框取消文本颜色
                 .build();
-
-        permissionUtil = new PermissionUtil.Builder().with(this).build();
     }
 
     public void requestPermission(View view) {
