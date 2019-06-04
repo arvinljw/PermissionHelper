@@ -48,7 +48,7 @@ protected void onDestroy() {
 ```
 private void install(File apk) {
     Intent intent = new Intent(Intent.ACTION_VIEW);
-    Uri uri = PermissionUtil.getUri(this, apk);
+    Uri uri = PermissionUtil.getUri(this, intent, apk);
     intent.setDataAndType(uri, "application/vnd.android.package-archive");
     startActivity(intent);
 }

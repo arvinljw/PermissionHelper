@@ -2,6 +2,7 @@ package net.arvin.permissionhelper.sample;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -138,6 +139,13 @@ public class MainActivity extends AppCompatActivity {
         Uri uri = PermissionUtil.getUri(this, apk);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
         startActivity(intent);
+    }
+
+    public void openSetting(View v) {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        startActivityForResult(intent, 1001);
     }
 
     @Override

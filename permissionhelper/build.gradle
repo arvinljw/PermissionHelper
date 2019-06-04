@@ -4,11 +4,11 @@ apply plugin: 'com.github.dcendents.android-maven'
 group='com.github.arvinljw'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 27
+        targetSdkVersion 28
     }
 
     buildTypes {
@@ -42,6 +42,6 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    compileOnly 'com.android.support:appcompat-v7:27.1.1'
+    compileOnly 'com.android.support:appcompat-v7:28.0.0'
 
 }
