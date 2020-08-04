@@ -1,18 +1,21 @@
 package net.arvin.permissionhelper;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import java.io.File;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
 
 /**
  * Created by arvinljw on 2018/9/17 16:30
@@ -27,26 +30,41 @@ public class PermissionUtil {
     private RequestPermissionListener requestPermissionListener;
     private RequestInstallAppListener requestInstallAppListener;
 
-    PermissionUtil(Builder builder) {
+    private static IPermissionTextProvider permissionTextProvider;
+
+    public static void setPermissionTextProvider(IPermissionTextProvider provider) {
+        permissionTextProvider = provider;
+    }
+
+    private PermissionUtil(Builder builder) {
         this.builder = builder;
         if (builder.activity != null) {
-            permissionFragment = initFragment(builder.activity.getSupportFragmentManager());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                permissionFragment = initFragment(builder.activity.getSupportFragmentManager());
+            }
             return;
         }
         if (builder.fragment != null) {
-            permissionFragment = initFragment(builder.fragment.getChildFragmentManager());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                permissionFragment = initFragment(builder.fragment.getChildFragmentManager());
+            }
             return;
         }
         Log.e(TAG, "PermissionUtil must set activity or fragment");
     }
 
+    public static void destroy() {
+        //以防以后需要销毁的数据这里处理
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private PermissionFragment initFragment(FragmentManager fragmentManager) {
         PermissionFragment fragment = (PermissionFragment) fragmentManager.findFragmentByTag(TAG);
         if (fragment == null) {
             fragment = new PermissionFragment();
             fragmentManager.beginTransaction()
                     .add(fragment, TAG)
-                    .commitNow();
+                    .commit();
         }
         fragment.setPermissionUtil(this);
         return fragment;
@@ -58,7 +76,8 @@ public class PermissionUtil {
 
     public void request(String msg, String[] permissions, RequestPermissionListener listener) {
         if (permissionFragment == null) {
-            Log.e(TAG, "PermissionUtil must set activity or fragment");
+//            Log.e(TAG, "PermissionUtil must set activity or fragment");
+            listener.callback(true, false);
             return;
         }
         if (permissions == null || permissions.length == 0) {
@@ -66,7 +85,9 @@ public class PermissionUtil {
             return;
         }
         this.requestPermissionListener = listener;
-        permissionFragment.request(msg, permissions);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            permissionFragment.request(msg, permissions);
+        }
     }
 
     public static String[] asArray(String... permissions) {
@@ -85,11 +106,16 @@ public class PermissionUtil {
 
     public void requestInstallApp(RequestInstallAppListener listener) {
         if (permissionFragment == null) {
+            listener.canInstallApp(false);
             Log.e(TAG, "PermissionUtil must set activity or fragment");
             return;
         }
         this.requestInstallAppListener = listener;
-        permissionFragment.requestInstallApp();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            permissionFragment.requestInstallApp();
+        } else {
+            listener.canInstallApp(true);
+        }
     }
 
     void callCanInstallApp(boolean canInstall) {
@@ -101,18 +127,11 @@ public class PermissionUtil {
     public void removeListener() {
         requestPermissionListener = null;
         requestInstallAppListener = null;
-    }
-
-    public static Uri getUri(@NonNull Context context, @NonNull File file) {
-        return getUri(context, file, context.getPackageName() + ".fileprovider");
+        permissionFragment = null;
     }
 
     public static Uri getUri(@NonNull Context context, @NonNull File file, @NonNull String authority) {
         return getUri(context, null, file, authority);
-    }
-
-    public static Uri getUri(@NonNull Context context, @NonNull Intent intent, @NonNull File file) {
-        return getUri(context, intent, file, context.getPackageName() + ".fileprovider");
     }
 
     public static Uri getUri(@NonNull Context context, Intent intent, @NonNull File file, @NonNull String authority) {
@@ -337,23 +356,33 @@ public class PermissionUtil {
         }
 
         public PermissionUtil build() {
-            if (textIsNone(ensureBtnText)) {
-                ensureBtnText = "确定";
+            Context context = null;
+            if (activity != null) {
+                context = activity;
             }
-            if (textIsNone(cancelBtnText)) {
-                cancelBtnText = "取消";
+            if (fragment != null) {
+                context = fragment.getActivity();
             }
-            if (textIsNone(settingMsg)) {
-                settingMsg = "当前应用缺少必要权限。\n请点击\"设置\"-\"权限\"-打开所需权限。";
+            if (context == null) {
+                return new PermissionUtil(this);
             }
-            if (textIsNone(settingEnsureText)) {
-                settingEnsureText = "设置";
+            if (textIsNone(ensureBtnText) && permissionTextProvider != null) {
+                ensureBtnText = permissionTextProvider.getEnsureBtnText();
             }
-            if (textIsNone(settingCancelText)) {
-                settingCancelText = "取消";
+            if (textIsNone(cancelBtnText) && permissionTextProvider != null) {
+                cancelBtnText = permissionTextProvider.getCancelBtnText();
             }
-            if (textIsNone(installAppMsg)) {
-                installAppMsg = "允许安装来自此来源的应用";
+            if (textIsNone(settingMsg) && permissionTextProvider != null) {
+                settingMsg = permissionTextProvider.getSettingMsg();
+            }
+            if (textIsNone(settingEnsureText) && permissionTextProvider != null) {
+                settingEnsureText = permissionTextProvider.getSettingEnsureText();
+            }
+            if (textIsNone(settingCancelText) && permissionTextProvider != null) {
+                settingCancelText = permissionTextProvider.getSettingCancelText();
+            }
+            if (textIsNone(installAppMsg) && permissionTextProvider != null) {
+                installAppMsg = permissionTextProvider.getInstallAppMsg();
             }
             return new PermissionUtil(this);
         }
@@ -361,6 +390,23 @@ public class PermissionUtil {
         private boolean textIsNone(String str) {
             return str == null;
         }
+    }
+
+    /**
+     * xxx 不直接调用sdk里的Resource类
+     */
+    public interface IPermissionTextProvider {
+        String getEnsureBtnText();
+
+        String getCancelBtnText();
+
+        String getSettingMsg();
+
+        String getSettingEnsureText();
+
+        String getSettingCancelText();
+
+        String getInstallAppMsg();
     }
 
     public interface RequestPermissionListener {

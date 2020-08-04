@@ -2,19 +2,14 @@ package net.arvin.permissionhelper.sample;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.v4.content.FileProvider;
-import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
@@ -25,9 +20,12 @@ import net.arvin.permissionhelper.PermissionUtil;
 
 import java.io.File;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends AppCompatActivity {
     PermissionUtil permissionUtil;
     TextView tvDeviceInfo;
+    String authority = "net.arvin.permissionhelper.sample.fileprovider";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initPermissionUtil() {
+        PermissionUtil.setPermissionTextProvider(new PermissionTextProviderImpl(this));
         permissionUtil = new PermissionUtil.Builder()
                 .with(this)//必传：可使用FragmentActivity或v4.Fragment实例
                 .setTitleText("提示")//弹框标题
@@ -113,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     private void openCamera(String dir) {
         File file = new File(dir, System.currentTimeMillis() + ".jpg");
         final Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, PermissionUtil.getUri(/*context*/this, intent, file));
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, PermissionUtil.getUri(/*context*/this, intent, file, authority));
         startActivity(intent);
     }
 
@@ -136,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void install(File apk) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        Uri uri = PermissionUtil.getUri(this, apk);
+        Uri uri = PermissionUtil.getUri(this, apk, authority);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
         startActivity(intent);
     }
@@ -155,5 +154,45 @@ public class MainActivity extends AppCompatActivity {
             permissionUtil.removeListener();
             permissionUtil = null;
         }
+    }
+
+    public static class PermissionTextProviderImpl implements PermissionUtil.IPermissionTextProvider {
+
+        private Context context;
+
+        public PermissionTextProviderImpl(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        public String getEnsureBtnText() {
+            return context.getResources().getString(R.string.permission_ensure);
+        }
+
+        @Override
+        public String getCancelBtnText() {
+            return context.getResources().getString(R.string.permission_cancel);
+        }
+
+        @Override
+        public String getSettingMsg() {
+            return context.getResources().getString(R.string.permission_setting_msg);
+        }
+
+        @Override
+        public String getSettingEnsureText() {
+            return context.getResources().getString(R.string.permission_setting);
+        }
+
+        @Override
+        public String getSettingCancelText() {
+            return context.getResources().getString(R.string.permission_cancel);
+        }
+
+        @Override
+        public String getInstallAppMsg() {
+            return context.getResources().getString(R.string.permission_install_tips);
+        }
+
     }
 }

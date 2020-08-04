@@ -10,13 +10,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.PermissionChecker;
-import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
@@ -25,11 +18,21 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.PermissionChecker;
+import androidx.fragment.app.Fragment;
+
 /**
  * Created by arvinljw on 2018/9/17 16:32
  * Function：
  * Desc：6.0权限动态申请实现类
  */
+@RequiresApi(api = Build.VERSION_CODES.M)
 public class PermissionFragment extends Fragment {
     private static final int REQUEST_CODE_PERMISSION = 0x1001;
     private static final int REQUEST_CODE_SETTING = 0x1002;
@@ -40,6 +43,7 @@ public class PermissionFragment extends Fragment {
 
     private String requestMsg;
     private String[] requestPermissions;
+    private boolean requestInstall;
 
     private AlertDialog requestPermissionDialog;
     private AlertDialog openSettingDialog;
@@ -54,19 +58,32 @@ public class PermissionFragment extends Fragment {
             requestMsg = savedInstanceState.getString("requestMsg");
             requestPermissions = savedInstanceState.getStringArray("requestPermissions");
         }
+
+        if (requestMsg != null) {
+            request(requestMsg, requestPermissions);
+        }
+        if (requestInstall) {
+            requestInstallApp();
+        }
     }
 
     public void setPermissionUtil(PermissionUtil permissionUtil) {
         this.permissionUtil = permissionUtil;
+        requestPermissionDialog = null;
+        openSettingDialog = null;
+        openInstallAppDialog = null;
     }
 
     public void request(String msg, String[] permissions) {
         this.requestMsg = msg;
         this.requestPermissions = permissions;
+        if (context == null) {
+            return;
+        }
         if (checkIsGranted(permissions)) {
             requestBack(true);
         } else {
-            requestPermissions(msg, permissions);
+            requestPermissions(msg);
         }
     }
 
@@ -76,7 +93,7 @@ public class PermissionFragment extends Fragment {
         }
         for (String perm : permissions) {
             boolean hasPerm = ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
-                    || PermissionChecker.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED;
+                    || PermissionChecker.checkSelfPermission(context, perm) == PermissionChecker.PERMISSION_GRANTED;
             if (!hasPerm) {
                 return false;
             }
@@ -84,9 +101,9 @@ public class PermissionFragment extends Fragment {
         return true;
     }
 
-    private void requestPermissions(String msg, final String[] permissions) {
+    private void requestPermissions(String msg) {
         boolean shouldShowRationale = false;
-        for (String perm : permissions) {
+        for (String perm : requestPermissions) {
             shouldShowRationale = shouldShowRationale || shouldShowRequestPermissionRationale(perm);
         }
 
@@ -96,16 +113,16 @@ public class PermissionFragment extends Fragment {
                 Log.d("PermissionFragment", "permissionUtil is null");
                 return;
             }
-            showRequestPermissionDialog(msg, permissions, activity);
+            showRequestPermissionDialog(msg, activity);
         } else {
-            requestPermissions(permissions, REQUEST_CODE_PERMISSION);
+            requestPermissions(requestPermissions, REQUEST_CODE_PERMISSION);
         }
     }
 
-    private void showRequestPermissionDialog(String msg, final String[] permissions, Activity activity) {
+    private void showRequestPermissionDialog(String msg, Activity activity) {
         PermissionUtil.Builder resBuilder = permissionUtil.getBuilder();
         if (!resBuilder.isShowRequest()) {
-            requestPermissions(permissions, REQUEST_CODE_PERMISSION);
+            requestPermissions(requestPermissions, REQUEST_CODE_PERMISSION);
             return;
         }
         if (requestPermissionDialog == null) {
@@ -113,7 +130,7 @@ public class PermissionFragment extends Fragment {
                     .initRequestPermission(resBuilder, msg, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            requestPermissions(permissions, REQUEST_CODE_PERMISSION);
+                            requestPermissions(requestPermissions, REQUEST_CODE_PERMISSION);
                         }
                     }, new DialogInterface.OnClickListener() {
                         @Override
@@ -204,6 +221,8 @@ public class PermissionFragment extends Fragment {
             }
             openSettingDialog.show();
             setAlertDialogColor(openSettingDialog, resBuilder);
+        } else {
+            requestBack(false);
         }
     }
 
@@ -231,6 +250,10 @@ public class PermissionFragment extends Fragment {
 
     private void requestInstallApp(boolean fromResult) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (context == null) {
+                requestInstall = true;
+                return;
+            }
             boolean haveInstallPermission = context.getPackageManager().canRequestPackageInstalls();
             if (!haveInstallPermission) {
                 showOpenInstallAppPermissionDialog(fromResult);

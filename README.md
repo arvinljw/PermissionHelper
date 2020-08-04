@@ -6,6 +6,8 @@
 
 [项目地址](https://github.com/arvinljw/PermissionHelper)
 
+**目前已经升级到AndroidX**
+
 ### 优点
 
 * 没有使用多余的第三方库
@@ -34,8 +36,8 @@ allprojects {
 ```
 dependencies {
     ...
-    implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.github.arvinljw:PermissionHelper:v1.0.1'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.github.arvinljw:PermissionHelper:v2.0.0'
 }
 ```
 
@@ -67,6 +69,14 @@ permissionUtil = new PermissionUtil.Builder()
 ```
 
 可配置的属性很多，大致含义也注释写清楚了，必须调用的属性只有一个，其他都有默认值。
+
+其中文本可以全局配置，使用：
+
+```
+PermissionUtil.setPermissionTextProvider(IPermissionTextProvider provider)
+```
+
+IPermissionTextProvider只是一个接口，权限中弹窗所使用到的文本，**优先级比手动设置的低**。
 
 **简洁版可以这样**：
 
@@ -105,9 +115,7 @@ permissionUtil.request("需要读取联系人权限",
 * 第一个参数：是申请权限说明，会在上文说的第一个弹框中作为内容显示
 * 第二个参数：是一个所要申请的权限字符串，也可以使用字符串数组，例如申请多个权限可使用：
 
-	`
-PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS)
-	`
+`PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS)`
 	
 * 第三个参数：申请权限的回调，`granted`表示是否通过，如果有多个权限的话表示是否全部通过；`isAlwaysDenied ` false表示会重复提示，true表示拒绝且不再提示
 
