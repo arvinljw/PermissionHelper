@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">PermissionHelper</string>
+    <string name="permission_ensure">确定</string>
+    <string name="permission_cancel">取消</string>
+    <string name="permission_setting">设置</string>
+    <string name="permission_install_tips">允许安装来自此来源的应用</string>
+    <string name="permission_setting_msg">当前应用缺少必要权限。\n请点击\"设置\"-\"权限\"-打开所需权限。</string>
 </resources>

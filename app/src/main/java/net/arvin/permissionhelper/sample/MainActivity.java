@@ -16,14 +16,17 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import net.arvin.permissionhelper.PermissionUtil;
+import androidx.appcompat.app.AppCompatActivity;
+
+import net.arvin.permissionhelper.PermissionHelper;
+import net.arvin.permissionhelper.core.DefaultPermissionTipsDialogProvider;
+import net.arvin.permissionhelper.core.RequestInstallAppListener;
+import net.arvin.permissionhelper.core.RequestPermissionListener;
 
 import java.io.File;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 public class MainActivity extends AppCompatActivity {
-    PermissionUtil permissionUtil;
+    PermissionHelper permissionUtil;
     TextView tvDeviceInfo;
     String authority = "net.arvin.permissionhelper.sample.fileprovider";
 
@@ -36,8 +39,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initPermissionUtil() {
-        PermissionUtil.setPermissionTextProvider(new PermissionTextProviderImpl(this));
-        permissionUtil = new PermissionUtil.Builder()
+        permissionUtil = new PermissionHelper.Builder()
                 .with(this)//必传：可使用FragmentActivity或v4.Fragment实例
                 .setTitleText("提示")//弹框标题
                 .setEnsureBtnText("确定")//权限说明弹框授权按钮文字
@@ -56,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
                 .setMsgColor(Color.GRAY)//弹框内容文本颜色
                 .setEnsureBtnColor(Color.BLACK)//弹框确定文本颜色
                 .setCancelBtnColor(Color.BLACK)//弹框取消文本颜色
+                .setDialogProvider(new DefaultPermissionTipsDialogProvider())
                 .build();
     }
 
@@ -64,8 +67,8 @@ public class MainActivity extends AppCompatActivity {
             initPermissionUtil();
         }
         permissionUtil.request("需要读取手机信息以及文件读写权限",
-                PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                new PermissionUtil.RequestPermissionListener() {
+                PermissionHelper.asArray(Manifest.permission.READ_PHONE_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+                new RequestPermissionListener() {
                     @Override
                     public void callback(boolean granted, boolean isAlwaysDenied) {
                         if (granted) {
@@ -112,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
     private void openCamera(String dir) {
         File file = new File(dir, System.currentTimeMillis() + ".jpg");
         final Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, PermissionUtil.getUri(/*context*/this, intent, file, authority));
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, PermissionHelper.getUri(this, intent, file, authority));
         startActivity(intent);
     }
 
@@ -121,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
         if (permissionUtil == null) {
             initPermissionUtil();
         }
-        permissionUtil.requestInstallApp(new PermissionUtil.RequestInstallAppListener() {
+        permissionUtil.requestInstallApp(new RequestInstallAppListener() {
             @Override
             public void canInstallApp(boolean canInstall) {
                 if (canInstall) {
@@ -135,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void install(File apk) {
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        Uri uri = PermissionUtil.getUri(this, apk, authority);
+        Uri uri = PermissionHelper.getUri(this, apk, authority);
         intent.setDataAndType(uri, "application/vnd.android.package-archive");
         startActivity(intent);
     }
@@ -154,45 +157,5 @@ public class MainActivity extends AppCompatActivity {
             permissionUtil.removeListener();
             permissionUtil = null;
         }
-    }
-
-    public static class PermissionTextProviderImpl implements PermissionUtil.IPermissionTextProvider {
-
-        private Context context;
-
-        public PermissionTextProviderImpl(Context context) {
-            this.context = context;
-        }
-
-        @Override
-        public String getEnsureBtnText() {
-            return context.getResources().getString(R.string.permission_ensure);
-        }
-
-        @Override
-        public String getCancelBtnText() {
-            return context.getResources().getString(R.string.permission_cancel);
-        }
-
-        @Override
-        public String getSettingMsg() {
-            return context.getResources().getString(R.string.permission_setting_msg);
-        }
-
-        @Override
-        public String getSettingEnsureText() {
-            return context.getResources().getString(R.string.permission_setting);
-        }
-
-        @Override
-        public String getSettingCancelText() {
-            return context.getResources().getString(R.string.permission_cancel);
-        }
-
-        @Override
-        public String getInstallAppMsg() {
-            return context.getResources().getString(R.string.permission_install_tips);
-        }
-
     }
 }

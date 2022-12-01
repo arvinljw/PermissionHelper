@@ -1,8 +1,7 @@
 ## PermissionHelper
 
 最近又看到有人是分享使用空Fragment，来避免重写onActivityResult进行Activity之间信息的交互，这让我想起了之前看到的RxPermissions这个库也是使用这个原理去申请权限，当时觉得居然还有这种操作，想象力真是太好了。
-
-但是即使它这个再好，我还是想说我这个可能更好一点。
+为了技术的学习和本身就会用到这个技术，所以就创建了这个库。
 
 [项目地址](https://github.com/arvinljw/PermissionHelper)
 
@@ -10,7 +9,7 @@
 
 ### 优点
 
-* 没有使用多余的第三方库
+* 没有使用任何多余的第三方库
 * Google权限申请的最佳实践
 * 使用简单，低耦合，可自定义提示框样式
 * 集成6.0动态申请权限，适配7.0文件共享以及8.0安装来自未知来源的应用
@@ -36,14 +35,49 @@ allprojects {
 ```
 dependencies {
     ...
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'com.github.arvinljw:PermissionHelper:v2.0.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0'//或者其他版本
+    implementation 'com.github.arvinljw:PermissionHelper:v2.0.1'
 }
 ```
 
 #### 使用
 
-**1、初始化PermissionUtil**
+**基本使用**：
+
+```
+if(permissionUtil == null){
+    permissionUtil = new PermissionUtil.Builder().with(this).build();
+}
+permissionUtil.request("需要读取联系人权限",
+        Manifest.permission.READ_PHONE_STATE,
+        new PermissionUtil.RequestPermissionListener() {
+            @Override
+            public void callback(boolean granted, boolean isAlwaysDenied) {
+                if (granted) {
+                    //do your jobs..
+                } else {
+                    //show some tips..
+                }
+            }
+        });
+
+```
+
+**清除permissionUtil持有的回调**
+
+这一步清除回调，避免匿名内部类引起的内存泄露。
+
+```
+if (permissionUtil != null) {
+    permissionUtil.removeListener();
+    permissionUtil = null;
+}
+```
+
+
+**进阶用法**
+
+**1、初始化的参数**
 
 ```
 permissionUtil = new PermissionUtil.Builder()
@@ -58,6 +92,7 @@ permissionUtil = new PermissionUtil.Builder()
         .setShowRequest(true)//是否显示申请权限弹框
         .setShowSetting(true)//是否显示设置弹框
         .setShowInstall(true)//是否显示允许安装此来源弹框
+        .setDialogProvider(new DefaultPermissionTipsDialogProvider())//可自定义显示的弹窗，参考DefaultPermissionTipsDialogProvider做好callback回调即可
         .setRequestCancelable(true)//申请权限说明弹款是否cancelable
         .setSettingCancelable(true)//打开设置界面弹款是否cancelable
         .setInstallCancelable(true)//打开允许安装此来源引用弹款是否cancelable
@@ -70,32 +105,15 @@ permissionUtil = new PermissionUtil.Builder()
 
 可配置的属性很多，大致含义也注释写清楚了，必须调用的属性只有一个，其他都有默认值。
 
-其中文本可以全局配置，使用：
+其中文本可以全局配置，使用：（不设置会使用默认的`DefaultPermissionTextProvider`，自定义时可参考默认实现）
 
 ```
 PermissionUtil.setPermissionTextProvider(IPermissionTextProvider provider)
 ```
 
-IPermissionTextProvider只是一个接口，权限中弹窗所使用到的文本，**优先级比手动设置的低**。
+IPermissionTextProvider只是一个接口，权限中弹窗所使用到的文本和文本颜色，**优先级比手动设置的低**。
 
-**简洁版可以这样**：
-
-```
-permissionUtil = new PermissionUtil.Builder().with(this).build();
-```
-
-需要说明一下动态申请权限可能有两个弹框：
-
-* 第一个弹框：第一次申请权限被拒绝后，弹出的弹框，解释为什么需要这个权限。
-* 第二个弹框：打开设置说明的弹框，只有当isShowSetting为true的时候，被拒绝一次之后，再次申请时再次拒绝且还点了不再提示，则通过打开设置去让用户手动修改权限。
-
-其中弹框使用的是AlertDialog，通过反射去修改文本颜色，不设置则不会调用反射方法，会有默认颜色：
-
-* 标题使用：textAppearanceLarge样式
-* 内容实用：textAppearanceMedium样式
-* 按钮颜色：默认使用colorAccent的颜色
-
-**2、申请权限并回调**
+**2、申请权限解释**
 
 ```
 permissionUtil.request("需要读取联系人权限",
@@ -112,7 +130,7 @@ permissionUtil.request("需要读取联系人权限",
         });
 ```
 
-* 第一个参数：是申请权限说明，会在上文说的第一个弹框中作为内容显示
+* 第一个参数：是申请权限说明，会在申请权限是否之后，再次申请时如果需要显示弹窗，则作为内容显示
 * 第二个参数：是一个所要申请的权限字符串，也可以使用字符串数组，例如申请多个权限可使用：
 
 `PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS)`
@@ -121,16 +139,6 @@ permissionUtil.request("需要读取联系人权限",
 
 通过这两步，就能完全权限的申请了，当然这里申请的权限需要在配置文件中定义。
 
-**3、清除permissionUtil持有的回调**
-
-这一步清除回调，避免匿名内部类引起的内存泄露。
-
-```
-if (permissionUtil != null) {
-    permissionUtil.removeListener();
-    permissionUtil = null;
-}
-```
 
 ### 7.0和8.0的适配
 

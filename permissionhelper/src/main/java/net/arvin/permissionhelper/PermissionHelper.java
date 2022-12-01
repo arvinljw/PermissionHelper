@@ -1,13 +1,10 @@
 package net.arvin.permissionhelper;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
-
-import java.io.File;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
@@ -17,15 +14,25 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
+import net.arvin.permissionhelper.core.DefaultPermissionTextProvider;
+import net.arvin.permissionhelper.core.DefaultPermissionTipsDialogProvider;
+import net.arvin.permissionhelper.core.IPermissionTextProvider;
+import net.arvin.permissionhelper.core.IPermissionTipsDialogProvider;
+import net.arvin.permissionhelper.core.PermissionFragment;
+import net.arvin.permissionhelper.core.RequestInstallAppListener;
+import net.arvin.permissionhelper.core.RequestPermissionListener;
+
+import java.io.File;
+
 /**
  * Created by arvinljw on 2018/9/17 16:30
  * Function：
  * Desc：6.0权限动态申请工具类
  */
-public class PermissionUtil {
-    private static final String TAG = PermissionUtil.class.getSimpleName();
+public class PermissionHelper {
+    private static final String TAG = PermissionHelper.class.getSimpleName();
 
-    private Builder builder;
+    private final Builder builder;
     private PermissionFragment permissionFragment;
     private RequestPermissionListener requestPermissionListener;
     private RequestInstallAppListener requestInstallAppListener;
@@ -36,7 +43,7 @@ public class PermissionUtil {
         permissionTextProvider = provider;
     }
 
-    private PermissionUtil(Builder builder) {
+    private PermissionHelper(Builder builder) {
         this.builder = builder;
         if (builder.activity != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -70,13 +77,13 @@ public class PermissionUtil {
         return fragment;
     }
 
-    public void request(String msg, String permissions, RequestPermissionListener listener) {
-        request(msg, new String[]{permissions}, listener);
+    public void request(String msg, String permission, RequestPermissionListener listener) {
+        request(msg, new String[]{permission}, listener);
     }
 
     public void request(String msg, String[] permissions, RequestPermissionListener listener) {
         if (permissionFragment == null) {
-//            Log.e(TAG, "PermissionUtil must set activity or fragment");
+            Log.e(TAG, "PermissionUtil must set activity or fragment");
             listener.callback(true, false);
             return;
         }
@@ -98,7 +105,7 @@ public class PermissionUtil {
         return builder;
     }
 
-    void requestBack(boolean granted, boolean isAlwaysDenied) {
+    public void requestBack(boolean granted, boolean isAlwaysDenied) {
         if (requestPermissionListener != null) {
             requestPermissionListener.callback(granted, isAlwaysDenied);
         }
@@ -118,7 +125,7 @@ public class PermissionUtil {
         }
     }
 
-    void callCanInstallApp(boolean canInstall) {
+    public void callCanInstallApp(boolean canInstall) {
         if (requestInstallAppListener != null) {
             requestInstallAppListener.canInstallApp(canInstall);
         }
@@ -188,6 +195,8 @@ public class PermissionUtil {
         private int ensureBtnColor;
         @ColorInt
         private int cancelBtnColor;
+
+        private IPermissionTipsDialogProvider dialogProvider;
 
         public Builder() {
         }
@@ -287,6 +296,11 @@ public class PermissionUtil {
             return this;
         }
 
+        public Builder setDialogProvider(IPermissionTipsDialogProvider dialogProvider) {
+            this.dialogProvider = dialogProvider;
+            return this;
+        }
+
         public String getTitleText() {
             return titleText;
         }
@@ -355,7 +369,11 @@ public class PermissionUtil {
             return cancelBtnColor;
         }
 
-        public PermissionUtil build() {
+        public IPermissionTipsDialogProvider getDialogProvider() {
+            return dialogProvider;
+        }
+
+        public PermissionHelper build() {
             Context context = null;
             if (activity != null) {
                 context = activity;
@@ -364,27 +382,48 @@ public class PermissionUtil {
                 context = fragment.getActivity();
             }
             if (context == null) {
-                return new PermissionUtil(this);
+                return new PermissionHelper(this);
             }
-            if (textIsNone(ensureBtnText) && permissionTextProvider != null) {
+
+            if (permissionTextProvider == null) {
+                permissionTextProvider = new DefaultPermissionTextProvider(context);
+            }
+
+            if (dialogProvider == null) {
+                dialogProvider = new DefaultPermissionTipsDialogProvider();
+            }
+
+            if (textIsNone(ensureBtnText)) {
                 ensureBtnText = permissionTextProvider.getEnsureBtnText();
             }
-            if (textIsNone(cancelBtnText) && permissionTextProvider != null) {
+            if (textIsNone(cancelBtnText)) {
                 cancelBtnText = permissionTextProvider.getCancelBtnText();
             }
-            if (textIsNone(settingMsg) && permissionTextProvider != null) {
+            if (textIsNone(settingMsg)) {
                 settingMsg = permissionTextProvider.getSettingMsg();
             }
-            if (textIsNone(settingEnsureText) && permissionTextProvider != null) {
+            if (textIsNone(settingEnsureText)) {
                 settingEnsureText = permissionTextProvider.getSettingEnsureText();
             }
-            if (textIsNone(settingCancelText) && permissionTextProvider != null) {
+            if (textIsNone(settingCancelText)) {
                 settingCancelText = permissionTextProvider.getSettingCancelText();
             }
-            if (textIsNone(installAppMsg) && permissionTextProvider != null) {
+            if (textIsNone(installAppMsg)) {
                 installAppMsg = permissionTextProvider.getInstallAppMsg();
             }
-            return new PermissionUtil(this);
+            if (titleColor == 0) {
+                titleColor = permissionTextProvider.getTitleColor();
+            }
+            if (msgColor == 0) {
+                msgColor = permissionTextProvider.getMsgColor();
+            }
+            if (ensureBtnColor == 0) {
+                ensureBtnColor = permissionTextProvider.getEnsureBtnColor();
+            }
+            if (cancelBtnColor == 0) {
+                cancelBtnColor = permissionTextProvider.getCancelBtnColor();
+            }
+            return new PermissionHelper(this);
         }
 
         private boolean textIsNone(String str) {
@@ -392,32 +431,4 @@ public class PermissionUtil {
         }
     }
 
-    /**
-     * xxx 不直接调用sdk里的Resource类
-     */
-    public interface IPermissionTextProvider {
-        String getEnsureBtnText();
-
-        String getCancelBtnText();
-
-        String getSettingMsg();
-
-        String getSettingEnsureText();
-
-        String getSettingCancelText();
-
-        String getInstallAppMsg();
-    }
-
-    public interface RequestPermissionListener {
-        /**
-         * @param granted        权限是否通过，如果有多个权限的话表示是否全部通过
-         * @param isAlwaysDenied false表示会重复提示，true表示拒绝且不再提示
-         */
-        void callback(boolean granted, boolean isAlwaysDenied);
-    }
-
-    public interface RequestInstallAppListener {
-        void canInstallApp(boolean canInstall);
-    }
 }
