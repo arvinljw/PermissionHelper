@@ -14,10 +14,10 @@
 
 ```
 public void installApp(View v) {
-    if (permissionUtil == null) {
-        initPermissionUtil();
+    if (permissionHelper == null) {
+        initPermissionHelper();
     }
-    permissionUtil.requestInstallApp(new PermissionUtil.RequestInstallAppListener() {
+    permissionHelper.requestInstallApp(new RequestInstallAppListener() {
         @Override
         public void canInstallApp(boolean canInstall) {
             if (canInstall) {
@@ -36,9 +36,9 @@ public void installApp(View v) {
 @Override
 protected void onDestroy() {
     super.onDestroy();
-    if (permissionUtil != null) {
-        permissionUtil.removeListener();
-        permissionUtil = null;
+    if (permissionHelper != null) {
+        permissionHelper.removeListener();
+        permissionHelper = null;
     }
 }
 ```
@@ -48,7 +48,7 @@ protected void onDestroy() {
 ```
 private void install(File apk) {
     Intent intent = new Intent(Intent.ACTION_VIEW);
-    Uri uri = PermissionUtil.getUri(this, intent, apk);
+    Uri uri = PermissionHelper.getUri(this, intent, apk);
     intent.setDataAndType(uri, "application/vnd.android.package-archive");
     startActivity(intent);
 }
