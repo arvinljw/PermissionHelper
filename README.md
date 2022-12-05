@@ -45,12 +45,12 @@ dependencies {
 **基本使用**：
 
 ```
-if(permissionUtil == null){
-    permissionUtil = new PermissionUtil.Builder().with(this).build();
+if(permissionHelper == null){
+    permissionHelper = new PermissionHelper.Builder().with(this).build();
 }
-permissionUtil.request("需要读取联系人权限",
+permissionHelper.request("需要读取联系人权限",
         Manifest.permission.READ_PHONE_STATE,
-        new PermissionUtil.RequestPermissionListener() {
+        new RequestPermissionListener() {
             @Override
             public void callback(boolean granted, boolean isAlwaysDenied) {
                 if (granted) {
@@ -63,14 +63,14 @@ permissionUtil.request("需要读取联系人权限",
 
 ```
 
-**清除permissionUtil持有的回调**
+**清除permissionHelper持有的回调**
 
 这一步清除回调，避免匿名内部类引起的内存泄露。
 
 ```
-if (permissionUtil != null) {
-    permissionUtil.removeListener();
-    permissionUtil = null;
+if (permissionHelper != null) {
+    permissionHelper.removeListener();
+    permissionHelper = null;
 }
 ```
 
@@ -80,7 +80,7 @@ if (permissionUtil != null) {
 **1、初始化的参数**
 
 ```
-permissionUtil = new PermissionUtil.Builder()
+permissionHelper = new PermissionHelper.Builder()
         .with(this)//必传：可使用FragmentActivity或v4.Fragment实例
         .setTitleText("提示")//弹框标题
         .setEnsureBtnText("确定")//权限说明弹框授权按钮文字
@@ -108,7 +108,7 @@ permissionUtil = new PermissionUtil.Builder()
 其中文本可以全局配置，使用：（不设置会使用默认的`DefaultPermissionTextProvider`，自定义时可参考默认实现）
 
 ```
-PermissionUtil.setPermissionTextProvider(IPermissionTextProvider provider)
+PermissionHelper.setPermissionTextProvider(IPermissionTextProvider provider)
 ```
 
 IPermissionTextProvider只是一个接口，权限中弹窗所使用到的文本和文本颜色，**优先级比手动设置的低**。
@@ -116,9 +116,9 @@ IPermissionTextProvider只是一个接口，权限中弹窗所使用到的文本
 **2、申请权限解释**
 
 ```
-permissionUtil.request("需要读取联系人权限",
+permissionHelper.request("需要读取联系人权限",
         Manifest.permission.READ_PHONE_STATE,
-        new PermissionUtil.RequestPermissionListener() {
+        new RequestPermissionListener() {
             @Override
             public void callback(boolean granted, boolean isAlwaysDenied) {
                 if (granted) {
@@ -133,7 +133,7 @@ permissionUtil.request("需要读取联系人权限",
 * 第一个参数：是申请权限说明，会在申请权限是否之后，再次申请时如果需要显示弹窗，则作为内容显示
 * 第二个参数：是一个所要申请的权限字符串，也可以使用字符串数组，例如申请多个权限可使用：
 
-`PermissionUtil.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS)`
+`PermissionHelper.asArray(Manifest.permission.READ_PHONE_STATE,Manifest.permission.READ_CONTACTS)`
 	
 * 第三个参数：申请权限的回调，`granted`表示是否通过，如果有多个权限的话表示是否全部通过；`isAlwaysDenied ` false表示会重复提示，true表示拒绝且不再提示
 
